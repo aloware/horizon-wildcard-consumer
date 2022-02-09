@@ -1,1 +1,1 @@
-# horizon-wildcard-consumer
+# Horizon Wildcard Consumer
