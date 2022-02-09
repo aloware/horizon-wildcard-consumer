@@ -108,11 +108,17 @@ class ProvisioningPlan extends BaseProvisioningPlan
 
     protected function getQueues(array $queuePatterns = []): string
     {
+        $prefix = config(
+            'horizon-wildcard-consumer.queue_name_prefix',
+            'laravel_database_queues'
+        );
         $keys = app('redis')->keys('*queues:*');
         $queues = collect($keys)
-            ->map(function ($item) {
-                return Str::after($item, 'laravel_database_queues:');
+            // remove prefix
+            ->map(function ($item) use ($prefix) {
+                return Str::after($item, $prefix . ':');
             })
+            // exclude :notify :reserved etc.
             ->filter(function ($item) {
                 return !Str::contains($item, ':');
             })
@@ -139,12 +145,12 @@ class ProvisioningPlan extends BaseProvisioningPlan
 
     private function wildcardMatches($pattern, $haystack): bool
     {
-        if ($pattern === $haystack) {
+        if ($pattern === $haystack && !Str::contains($pattern, '*')) {
             return true;
         }
 
         $regex = str_replace(
-            ["\*", "\?"], // wildcard chars
+            ["\*"], // wildcard chars
             ['.*', '.'],  // regexp chars
             preg_quote($pattern)
         );
