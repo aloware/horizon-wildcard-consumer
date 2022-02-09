@@ -139,13 +139,17 @@ class ProvisioningPlan extends BaseProvisioningPlan
 
     private function wildcardMatches($pattern, $haystack): bool
     {
+        if ($pattern === $haystack) {
+            return true;
+        }
+
         $regex = str_replace(
             ["\*", "\?"], // wildcard chars
-            ['.*', '.'],   // regexp chars
+            ['.*', '.'],  // regexp chars
             preg_quote($pattern)
         );
 
-        preg_match('/^'.$regex.'$/is', $haystack, $matches);
+        preg_match('/^' . $regex . '$/is', $haystack, $matches);
 
         return count($matches) > 0;
     }
