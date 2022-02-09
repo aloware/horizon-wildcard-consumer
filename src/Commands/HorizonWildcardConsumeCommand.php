@@ -14,7 +14,7 @@ class HorizonWildcardConsumeCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'horizon:wildcard:consume {--environment= : The environment name}';
+    protected $signature = 'horizon:wildcard-consume {--environment= : The environment name}';
 
     /**
      * The console command description.
