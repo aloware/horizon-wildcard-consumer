@@ -19,7 +19,7 @@
     "illuminate/support": "^5.7|^6.0",
     "illuminate/console": "^5.7|^6.0",
     "illuminate/queue": "^5.7|^6.0",
-    "laravel/horizon": "^3.0"
+    "laravel/horizon": "^2.0|^3.0"
   },
   "require-dev": {
     "phpunit/phpunit": "^7.5|^8.4",
