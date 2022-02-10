@@ -14,7 +14,7 @@ class ProvisioningPlan extends BaseProvisioningPlan
      *
      * @var array
      */
-    protected $supervisors;
+    protected array $supervisors = [];
 
     /*
      * Last run of observer
@@ -76,7 +76,6 @@ class ProvisioningPlan extends BaseProvisioningPlan
     public function updatedSupervisors($env): array
     {
         $updatedSupervisors = [];
-        $supervisors = [];
         $this->parsed = $this->toSupervisorOptions();
 
         foreach ($this->parsed[$env] as $key => $supervisor) {
@@ -87,21 +86,19 @@ class ProvisioningPlan extends BaseProvisioningPlan
                     $queues,
                     data_get($this->supervisors, $supervisor->name, [])
                 );
-                
-                dump('diff', $queues, data_get($this->supervisors, $supervisor->name, []));
 
                 if (count($diff) > 0) {
-                    $supervisors[$supervisor->name] = $queues;
+                    if (! array_key_exists($supervisor->name, $this->supervisors)) {
+                        $this->supervisors[$supervisor->name] = $queues;
+                    } else {
+                        $this->supervisors[$supervisor->name] = array_merge($this->supervisors[$supervisor->name], $queues);
+                    }
                     $updatedSupervisors[] = $supervisor->name;
                 } else {
                     unset($this->parsed[$env][$key]);
                 }
             }
         }
-
-        dump('updated supervisors', $updatedSupervisors);
-
-        $this->supervisors = $supervisors;
 
         $this->lastRun = now();
 
@@ -115,7 +112,7 @@ class ProvisioningPlan extends BaseProvisioningPlan
             'laravel_database_queues'
         );
         $keys = app('redis')->keys('*queues:*');
-        dump('keys', $keys);
+
         $queues = collect($keys)
             // remove prefix
             ->map(function ($item) use ($prefix) {
@@ -126,8 +123,6 @@ class ProvisioningPlan extends BaseProvisioningPlan
                 return !Str::contains($item, ':');
             })
             ->all();
-
-        dump('found queues', $queues);
 
         $matched = [];
 
@@ -144,8 +139,6 @@ class ProvisioningPlan extends BaseProvisioningPlan
                 $matched = $queues;
             }
         }
-
-        dump('matched queues', $matched);
 
         return !empty($matched) ? implode(',', $matched) : 'default';
     }
