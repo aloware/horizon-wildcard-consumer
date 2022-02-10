@@ -89,9 +89,8 @@ class ProvisioningPlan extends BaseProvisioningPlan
                         $queues,
                         data_get($this->supervisors, $supervisor->name, [])
                     );
+                    dump('diff', $queues, data_get($this->supervisors, $supervisor->name, []));
                 }
-
-                dump('diff', $queues, data_get($this->supervisors, $supervisor->name, []));
 
                 if (count($diff) > 0) {
                     $supervisors[$supervisor->name] = $queues;
