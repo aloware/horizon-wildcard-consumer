@@ -32,6 +32,7 @@ class MasterSupervisor extends BaseMasterSupervisor
             sleep(1);
 
             if ($provisioning->shouldRun()) {
+                dump('run observer');
                 $updatedSupervisors = $provisioning->updatedSupervisors($env);
                 if (count($updatedSupervisors) > 0) {
                     $supervisors = $this

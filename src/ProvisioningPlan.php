@@ -88,6 +88,8 @@ class ProvisioningPlan extends BaseProvisioningPlan
                     data_get($this->supervisors, $supervisor->name, [])
                 );
 
+                dump('diff', $queues, data_get($this->supervisors, $supervisor->name, []));
+
                 if (count($diff) > 0) {
                     $supervisors[$supervisor->name] = $queues;
                     $updatedSupervisors[] = $supervisor->name;
@@ -113,6 +115,7 @@ class ProvisioningPlan extends BaseProvisioningPlan
             'laravel_database_queues'
         );
         $keys = app('redis')->keys('*queues:*');
+        dump('keys', $keys);
         $queues = collect($keys)
             // remove prefix
             ->map(function ($item) use ($prefix) {
@@ -123,6 +126,8 @@ class ProvisioningPlan extends BaseProvisioningPlan
                 return !Str::contains($item, ':');
             })
             ->all();
+
+        dump('found queues', $queues);
 
         $matched = [];
 
@@ -139,6 +144,8 @@ class ProvisioningPlan extends BaseProvisioningPlan
                 $matched = $queues;
             }
         }
+
+        dump('matched queues', $matched);
 
         return !empty($matched) ? implode(',', $matched) : 'default';
     }
