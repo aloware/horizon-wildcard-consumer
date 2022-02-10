@@ -14,7 +14,7 @@ class ProvisioningPlan extends BaseProvisioningPlan
      *
      * @var array
      */
-    protected array $supervisors = [];
+    protected $supervisors = [];
 
     /*
      * Last run of observer
