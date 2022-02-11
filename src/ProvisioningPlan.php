@@ -51,7 +51,7 @@ class ProvisioningPlan extends BaseProvisioningPlan
             $key = $key === 'tries' ? 'max_tries' : $key;
             $key = $key === 'processes' ? 'max_processes' : $key;
 
-            if ($key === 'queue' && is_array($value)) {
+            if ($key === 'queue') {
                 $value = $this->getQueues($value);
             }
 
