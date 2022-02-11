@@ -62,6 +62,20 @@ class ProvisioningPlan extends BaseProvisioningPlan
     }
 
     /**
+     * Convert the provisioning plan into an array of SupervisorOptions.
+     *
+     * @return array
+     */
+    public function toSupervisorOptions()
+    {
+        return collect($this->plan)->mapWithKeys(function ($plan, $environment) {
+            return [$environment => collect($plan)->mapWithKeys(function ($options, $supervisor) {
+                return [$supervisor => $this->convert($supervisor, $options)];
+            })];
+        })->all();
+    }
+    
+    /**
      * Convert the given array of options into a SupervisorOptions instance.
      *
      * @param  string  $supervisor
