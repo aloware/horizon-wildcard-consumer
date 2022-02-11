@@ -90,24 +90,26 @@ class ProvisioningPlan extends BaseProvisioningPlan
         $this->parsed = $this->toSupervisorOptions();
 
         foreach ($this->parsed[$env] as $key => $supervisor) {
-            if (!blank($supervisor->queue)) {
-                $queues = explode(',', $supervisor->queue);
+            if (blank($supervisor->queue)) {
+                continue;
+            }
+            
+            $queues = explode(',', $supervisor->queue);
 
-                $diff = array_diff(
-                    $queues,
-                    data_get($this->supervisors, $supervisor->name, [])
-                );
+            $diff = array_diff(
+                $queues,
+                data_get($this->supervisors, $supervisor->name, [])
+            );
 
-                if (count($diff) > 0) {
-                    if (! array_key_exists($supervisor->name, $this->supervisors)) {
-                        $this->supervisors[$supervisor->name] = $queues;
-                    } else {
-                        $this->supervisors[$supervisor->name] = array_merge($this->supervisors[$supervisor->name], $queues);
-                    }
-                    $updatedSupervisors[] = $supervisor->name;
+            if (count($diff) > 0) {
+                if (! array_key_exists($supervisor->name, $this->supervisors)) {
+                    $this->supervisors[$supervisor->name] = $queues;
                 } else {
-                    unset($this->parsed[$env][$key]);
+                    $this->supervisors[$supervisor->name] = array_merge($this->supervisors[$supervisor->name], $queues);
                 }
+                $updatedSupervisors[] = $supervisor->name;
+            } else {
+                unset($this->parsed[$env][$key]);
             }
         }
 
