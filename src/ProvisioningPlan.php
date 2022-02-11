@@ -39,6 +39,29 @@ class ProvisioningPlan extends BaseProvisioningPlan
     }
 
     /**
+     * Deploy a provisioning plan to the current machine.
+     *
+     * @param  string  $environment
+     * @return void
+     */
+    public function deploy($environment)
+    {
+        dump('started deploy');
+        $supervisors = collect($this->parsed)->first(function ($_, $name) use ($environment) {
+            return Str::is($name, $environment);
+        });
+
+        if (empty($supervisors)) {
+            return;
+        }
+
+        foreach ($supervisors as $supervisor => $options) {
+            dump('added new supervisor');
+            $this->add($options);
+        }
+    }
+
+    /**
      * Convert the given array of options into a SupervisorOptions instance.
      *
      * @param  string  $supervisor
@@ -115,6 +138,8 @@ class ProvisioningPlan extends BaseProvisioningPlan
         );
         $keys = app('redis')->keys('*queues:*');
 
+        dump('redis keys', $keys);
+
         $queues = collect($keys)
             // remove prefix
             ->map(function ($item) use ($prefix) {
@@ -125,6 +150,8 @@ class ProvisioningPlan extends BaseProvisioningPlan
                 return !Str::contains($item, ':');
             })
             ->all();
+
+        dump('queues found', $queues);
 
         $matched = [];
 
@@ -141,6 +168,8 @@ class ProvisioningPlan extends BaseProvisioningPlan
                 $matched = $queues;
             }
         }
+
+        dump('matched queues', $matched);
 
         return !empty($matched) ? implode(',', $matched) : 'default';
     }
