@@ -13,7 +13,6 @@ class MasterSupervisor extends BaseMasterSupervisor
      */
     public function monitor()
     {
-        print('started monitoring' . PHP_EOL);
         [$provisioning, $env] = func_get_args();
 
         $this->ensureNoOtherMasterSupervisors();
@@ -27,20 +26,16 @@ class MasterSupervisor extends BaseMasterSupervisor
 
             if ($provisioning->shouldRun()) {
                 $updatedSupervisors = $provisioning->updatedSupervisors($env);
-
-                dump('updated supervisors', $updatedSupervisors);
-                
                 if (count($updatedSupervisors) > 0) {
                     $supervisors = $this
                         ->supervisors
                         ->filter(
                             function ($supervisor) use ($updatedSupervisors) {
-                                return in_array($supervisor->name, $updatedSupervisors);
+                                return in_array($supervisor->name, $updatedSupervisors, true);
                             }
                         );
 
                     if ($supervisors->count() > 0) {
-                        dump('restarting supervisors', $supervisors);
                         $supervisors->each->terminate();
                         $provisioning->deploy($env);
                     }

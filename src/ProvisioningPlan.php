@@ -39,43 +39,6 @@ class ProvisioningPlan extends BaseProvisioningPlan
     }
 
     /**
-     * Deploy a provisioning plan to the current machine.
-     *
-     * @param  string  $environment
-     * @return void
-     */
-    public function deploy($environment)
-    {
-        dump('started deploy');
-        $supervisors = collect($this->parsed)->first(function ($_, $name) use ($environment) {
-            return Str::is($name, $environment);
-        });
-
-        if (empty($supervisors)) {
-            return;
-        }
-
-        foreach ($supervisors as $supervisor => $options) {
-            dump('added new supervisor');
-            $this->add($options);
-        }
-    }
-
-    /**
-     * Convert the provisioning plan into an array of SupervisorOptions.
-     *
-     * @return array
-     */
-    public function toSupervisorOptions()
-    {
-        return collect($this->plan)->mapWithKeys(function ($plan, $environment) {
-            return [$environment => collect($plan)->mapWithKeys(function ($options, $supervisor) {
-                return [$supervisor => $this->convert($supervisor, $options)];
-            })];
-        })->all();
-    }
-    
-    /**
      * Convert the given array of options into a SupervisorOptions instance.
      *
      * @param  string  $supervisor
@@ -100,6 +63,11 @@ class ProvisioningPlan extends BaseProvisioningPlan
         );
     }
 
+    /**
+     * Determine if observing new queus timed out after last run
+     *
+     * @return bool
+     */
     public function shouldRun(): bool
     {
         if (!$this->lastRun) {
@@ -110,12 +78,16 @@ class ProvisioningPlan extends BaseProvisioningPlan
         return $this->lastRun->diffInSeconds(now(), true) > $timeout;
     }
 
+    /**
+     * Parse new queues and return updated supervisors
+     *
+     * @param  string  $env
+     * @return array
+     */
     public function updatedSupervisors($env): array
     {
         $updatedSupervisors = [];
         $this->parsed = $this->toSupervisorOptions();
-
-        dump('parsed', $this->parsed);
 
         foreach ($this->parsed[$env] as $key => $supervisor) {
             if (!blank($supervisor->queue)) {
@@ -144,15 +116,21 @@ class ProvisioningPlan extends BaseProvisioningPlan
         return $updatedSupervisors;
     }
 
-    protected function getQueues(array $queuePatterns = []): string
+    /**
+     * Observe new queues from redis and return list of comma separated queues
+     *
+     * @param  array|string  $queuePatterns
+     * @return string
+     */
+    protected function getQueues($queuePatterns): string
     {
+        $queuePatterns = is_array($queuePatterns) ? $queuePatterns : explode(',', $queuePatterns);
+
         $prefix = config(
             'horizon-wildcard-consumer.queue_name_prefix',
             'laravel_database_queues'
         );
         $keys = app('redis')->keys('*queues:*');
-
-        dump('redis keys', $keys);
 
         $queues = collect($keys)
             // remove prefix
@@ -164,8 +142,6 @@ class ProvisioningPlan extends BaseProvisioningPlan
                 return !Str::contains($item, ':');
             })
             ->all();
-
-        dump('queues found', $queues);
 
         $matched = [];
 
@@ -183,11 +159,16 @@ class ProvisioningPlan extends BaseProvisioningPlan
             }
         }
 
-        dump('matched queues', $matched);
-
         return !empty($matched) ? implode(',', $matched) : 'default';
     }
 
+    /**
+     * Match queues with given wildcard
+     *
+     * @param  string  $pattern
+     * @param  string  $haystack
+     * @return bool
+     */
     private function wildcardMatches($pattern, $haystack): bool
     {
         if ($pattern === $haystack && !Str::contains($pattern, '*')) {
