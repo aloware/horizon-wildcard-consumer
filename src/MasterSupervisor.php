@@ -6,13 +6,6 @@ use Laravel\Horizon\MasterSupervisor as BaseMasterSupervisor;
 
 class MasterSupervisor extends BaseMasterSupervisor
 {
-    /*
-     * Last run of queue observer method
-     *
-     * @var
-     */
-    public $lastRun;
-
     /**
      * Monitor the worker processes.
      *
@@ -20,6 +13,7 @@ class MasterSupervisor extends BaseMasterSupervisor
      */
     public function monitor()
     {
+        print('started monitoring' . PHP_EOL);
         [$provisioning, $env] = func_get_args();
 
         $this->ensureNoOtherMasterSupervisors();
@@ -33,6 +27,8 @@ class MasterSupervisor extends BaseMasterSupervisor
 
             if ($provisioning->shouldRun()) {
                 $updatedSupervisors = $provisioning->updatedSupervisors($env);
+
+                dump('updated supervisors', $updatedSupervisors);
                 
                 if (count($updatedSupervisors) > 0) {
                     $supervisors = $this
@@ -44,6 +40,7 @@ class MasterSupervisor extends BaseMasterSupervisor
                         );
 
                     if ($supervisors->count() > 0) {
+                        dump('restarting supervisors', $supervisors);
                         $supervisors->each->terminate();
                         $provisioning->deploy($env);
                     }

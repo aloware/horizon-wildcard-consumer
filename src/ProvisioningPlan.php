@@ -78,6 +78,8 @@ class ProvisioningPlan extends BaseProvisioningPlan
         $updatedSupervisors = [];
         $this->parsed = $this->toSupervisorOptions();
 
+        dump('parsed', $this->parsed);
+
         foreach ($this->parsed[$env] as $key => $supervisor) {
             if (!blank($supervisor->queue)) {
                 $queues = explode(',', $supervisor->queue);
