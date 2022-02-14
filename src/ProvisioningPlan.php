@@ -132,7 +132,10 @@ class ProvisioningPlan extends BaseProvisioningPlan
             'horizon-wildcard-consumer.queue_name_prefix',
             'laravel_database_queues'
         );
-        $keys = app('redis')->keys('*queues:*');
+
+        $keys = app('redis')
+            ->connection(config('horizon.use'))
+            ->keys('*queues:*');
 
         $queues = collect($keys)
             // remove prefix
