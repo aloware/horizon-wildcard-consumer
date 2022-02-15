@@ -93,7 +93,7 @@ class ProvisioningPlan extends BaseProvisioningPlan
             if (blank($supervisor->queue)) {
                 continue;
             }
-            
+
             $queues = explode(',', $supervisor->queue);
 
             $diff = array_diff(
@@ -102,7 +102,7 @@ class ProvisioningPlan extends BaseProvisioningPlan
             );
 
             if (count($diff) > 0) {
-                if (! array_key_exists($supervisor->name, $this->supervisors)) {
+                if (!array_key_exists($supervisor->name, $this->supervisors)) {
                     $this->supervisors[$supervisor->name] = $queues;
                 } else {
                     $this->supervisors[$supervisor->name] = array_merge($this->supervisors[$supervisor->name], $queues);
