@@ -19,7 +19,7 @@ php artisan horizon:wildcard-consume
 Before running this command make sure you added wildcards to your supervisor in **Horizon** config file.
 This command works just like standard **php artisan horizon** command if you don't have any wildcards in config.
 
-##Example config
+## Example config
 
 `config/horizon.php` environments section (please notice `*` in queue names):
 
