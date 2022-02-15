@@ -11,6 +11,7 @@ class ProvisioningPlan extends BaseProvisioningPlan
 {
     /**
      * Current supervisors
+     * TODO: use $this->parsed instead
      *
      * @var array
      */
@@ -107,6 +108,7 @@ class ProvisioningPlan extends BaseProvisioningPlan
                 } else {
                     $this->supervisors[$supervisor->name] = array_merge($this->supervisors[$supervisor->name], $queues);
                 }
+                $this->parsed[$env][$key]->queue = implode(',', $this->supervisors[$supervisor->name]);
                 $updatedSupervisors[] = $supervisor->name;
             } else {
                 unset($this->parsed[$env][$key]);
@@ -132,7 +134,10 @@ class ProvisioningPlan extends BaseProvisioningPlan
             'horizon-wildcard-consumer.queue_name_prefix',
             'laravel_database_queues'
         );
-        $keys = app('redis')->keys('*queues:*');
+
+        $keys = app('redis')
+            ->connection(config('horizon.use'))
+            ->keys('*queues:*');
 
         $queues = collect($keys)
             // remove prefix
