@@ -103,12 +103,15 @@ class ProvisioningPlan extends BaseProvisioningPlan
             );
 
             if (count($diff) > 0) {
+                $parsedQueues = [];
                 if (!array_key_exists($supervisor->name, $this->supervisors)) {
-                    $this->supervisors[$supervisor->name] = $queues;
+                    $parsedQueues = $queues;
                 } else {
-                    $this->supervisors[$supervisor->name] = array_merge($this->supervisors[$supervisor->name], $queues);
+                    $parsedQueues = array_merge($this->supervisors[$supervisor->name], $queues);
                 }
-                $this->parsed[$env][$key]->queue = implode(',', $this->supervisors[$supervisor->name]);
+                $parsedQueues = array_unique($parsedQueues);
+                $this->supervisors[$supervisor->name] = $parsedQueues;
+                $this->parsed[$env][$key]->queue = implode(',', $parsedQueues);
                 $updatedSupervisors[] = $supervisor->name;
             } else {
                 unset($this->parsed[$env][$key]);
@@ -126,47 +129,53 @@ class ProvisioningPlan extends BaseProvisioningPlan
      * @param  array|string  $queuePatterns
      * @return string
      */
-    protected function getQueues($queuePatterns): string
+    protected function getQueues($queues): string
     {
-        $queuePatterns = is_array($queuePatterns) ? $queuePatterns : explode(',', $queuePatterns);
+        $queues = collect(is_array($queues) ? $queues : explode(',', $queues));
 
-        $prefix = config(
-            'horizon-wildcard-consumer.queue_name_prefix',
-            'laravel_database_queues'
-        );
+        $matched = $queues->filter(function ($queue) {
+            return !Str::contains($queue, '*');
+        })->all();
 
-        $keys = app('redis')
-            ->connection(config('horizon.use'))
-            ->keys('*queues:*');
+        $wildcards = $queues->filter(function ($queue) {
+            return Str::contains($queue, '*');
+        })->all();
 
-        $queues = collect($keys)
-            // remove prefix
-            ->map(function ($item) use ($prefix) {
-                return Str::after($item, $prefix . ':');
-            })
-            // exclude :notify :reserved etc.
-            ->filter(function ($item) {
-                return !Str::contains($item, ':');
-            })
-            ->all();
+        if (count($wildcards) > 0) {
+            $prefix = config(
+                'horizon-wildcard-consumer.queue_name_prefix',
+                'laravel_database_queues'
+            );
 
-        $matched = [];
+            $keys = app('redis')
+                ->connection(config('horizon.use'))
+                ->keys('*queues:*');
 
-        if (count($queues) > 0) {
-            if (count($queuePatterns) > 0) {
+            $queues = collect($keys)
+                // remove prefix
+                ->map(function ($item) use ($prefix) {
+                    return Str::after($item, $prefix . ':');
+                })
+                // exclude :notify :reserved etc.
+                ->filter(function ($item) {
+                    return !Str::contains($item, ':');
+                })
+                ->all();
+
+            if (count($queues) > 0) {
                 foreach ($queues as $queue) {
-                    foreach ($queuePatterns as $wildcard) {
+                    foreach ($wildcards as $wildcard) {
                         if ($this->wildcardMatches($wildcard, $queue)) {
                             $matched[] = $queue;
                         }
                     }
                 }
-            } else {
-                $matched = $queues;
             }
         }
 
-        return !empty($matched) ? implode(',', $matched) : 'default';
+        $matched = array_unique($matched);
+
+        return implode(',', $matched);
     }
 
     /**
