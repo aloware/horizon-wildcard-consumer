@@ -52,7 +52,7 @@ class HorizonWildcardConsumeCommand extends Command
 
         $provisioning->deploy($env);
 
-        $this->info('Horizon started successfully.');
+        $this->info('Horizon started successfully using ' . config('queue.default', 'redis') . ' driver');
 
         pcntl_async_signals(true);
 

@@ -126,14 +126,15 @@ class ProvisioningPlan extends BaseProvisioningPlan
     /**
      * Observe new queues from redis and return list of comma separated queues
      *
-     * @param  array|string  $queuePatterns
+     * @param array|string $queuePatterns
      * @return string
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     protected function getQueues($queues): string
     {
         $queues = collect(is_array($queues) ? $queues : explode(',', $queues));
 
-        $matched = $queues->filter(function ($queue) {
+        $normalQueues = $queues->filter(function ($queue) {
             return !Str::contains($queue, '*');
         })->all();
 
@@ -141,64 +142,16 @@ class ProvisioningPlan extends BaseProvisioningPlan
             return Str::contains($queue, '*');
         })->all();
 
+        $matched = [];
+
         if (count($wildcards) > 0) {
-            $prefix = config(
-                'horizon-wildcard-consumer.queue_name_prefix',
-                'laravel_database_queues'
-            );
-
-            $keys = app('redis')
-                ->connection(config('horizon.use'))
-                ->keys('*queues:*');
-
-            $queues = collect($keys)
-                // remove prefix
-                ->map(function ($item) use ($prefix) {
-                    return Str::after($item, $prefix . ':');
-                })
-                // exclude :notify :reserved etc.
-                ->filter(function ($item) {
-                    return !Str::contains($item, ':');
-                })
-                ->all();
-
-            if (count($queues) > 0) {
-                foreach ($queues as $queue) {
-                    foreach ($wildcards as $wildcard) {
-                        if ($this->wildcardMatches($wildcard, $queue)) {
-                            $matched[] = $queue;
-                        }
-                    }
-                }
-            }
+            $matched = (new WildcardMatcher($wildcards))->handle();
         }
 
-        $matched = array_unique($matched);
-
-        return implode(',', $matched);
-    }
-
-    /**
-     * Match queues with given wildcard
-     *
-     * @param  string  $pattern
-     * @param  string  $haystack
-     * @return bool
-     */
-    private function wildcardMatches($pattern, $haystack): bool
-    {
-        if ($pattern === $haystack && !Str::contains($pattern, '*')) {
-            return true;
-        }
-
-        $regex = str_replace(
-            ["\*"], // wildcard chars
-            ['.*', '.'],  // regexp chars
-            preg_quote($pattern)
+        $matched = array_unique(
+            array_merge($normalQueues, $matched)
         );
 
-        preg_match('/^' . $regex . '$/is', $haystack, $matches);
-
-        return count($matches) > 0;
+        return implode(',', $matched);
     }
 }
