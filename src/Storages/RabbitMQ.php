@@ -16,7 +16,7 @@ class RabbitMQ implements StorageContract
     public function queues(): array
     {
         $http = new Client([
-            'base_uri' => config('horizon-wildcard-consumer.rabbitmq_api_url')
+            'base_uri' => config('horizon-wildcard-consumer.rabbitmq_api_url', 'http://localhost:15672')
         ]);
 
         $login = config('queue.connections.rabbitmq.login');

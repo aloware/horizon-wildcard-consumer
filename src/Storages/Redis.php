@@ -14,7 +14,7 @@ class Redis implements StorageContract
     public function queues(): array
     {
             $prefix = config(
-                'horizon-wildcard-consumer.queue_name_prefix',
+                'horizon-wildcard-consumer.redis_queue_name_prefix',
                 'laravel_database_queues'
             );
 
