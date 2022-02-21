@@ -3,6 +3,7 @@
 namespace Aloware\HorizonWildcardConsumer;
 
 use Illuminate\Support\ServiceProvider;
+use Aloware\HorizonWildcardConsumer\Middlewares\WorkloadResponseMiddleware;
 
 class HorizonWildcardConsumerServiceProvider extends ServiceProvider
 {
@@ -26,6 +27,13 @@ class HorizonWildcardConsumerServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        /** @var Router $router */
+        $router = $this->app['router'];
+        $router->pushMiddlewareToGroup(
+            'web',
+            WorkloadResponseMiddleware::class
+        );
+
         if ($this->app->runningInConsole()) {
             $this->publishes([
                 __DIR__.'/HorizonWildcardConsumerServiceProvider.php' => app_path('Providers/HorizonWildcardConsumerServiceProvider.php'),

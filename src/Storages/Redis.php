@@ -3,6 +3,7 @@
 namespace Aloware\HorizonWildcardConsumer\Storages;
 
 use Aloware\HorizonWildcardConsumer\Contracts\StorageContract;
+use Illuminate\Support\Str;
 
 class Redis implements StorageContract
 {
