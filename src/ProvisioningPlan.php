@@ -154,16 +154,7 @@ class ProvisioningPlan extends BaseProvisioningPlan
         $matched = [];
 
         if (count($wildcards) > 0) {
-            $driver = config('queue.default', 'redis');
-            $storage = null;
-            if ($driver === 'redis') {
-                $conn = config('horizon.supervisors.' . $this->env . '.' . $supervisor);
-                $storage = new Redis($conn);
-            }
-
-            if ($driver === 'rabbitmq') {
-                $storage = new RabbitMQ();
-            }
+            $storage = $this->getStorage($supervisor);
             $matched = (new WildcardMatcher($storage))->handle($wildcards);
         }
 
@@ -172,5 +163,20 @@ class ProvisioningPlan extends BaseProvisioningPlan
         );
 
         return implode(',', $matched);
+    }
+
+    protected function getStorage($supervisor)
+    {
+        $driver = config('queue.default', 'redis');
+        $storage = null;
+        if ($driver === 'redis') {
+            $conn = config('horizon.supervisors.' . $this->env . '.' . $supervisor);
+            $storage = new Redis($conn);
+        }
+
+        if ($driver === 'rabbitmq') {
+            $storage = new RabbitMQ();
+        }
+        return $storage;
     }
 }
