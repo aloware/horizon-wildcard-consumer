@@ -37,9 +37,10 @@ class WorkloadResponseMiddleware
                 })
                 ->groupBy('name')
                 ->map(function ($group) {
+                    $origNames = $group->pluck('orig_name');
                     return [
                         'name' => data_get($group->first(), 'name'),
-                        'orig_name' => $group->join(','),
+                        'orig_name' => $origNames ? $origNames->join(',') : '',
                         'processes' => data_get($group->first(), 'processes'),
                         'wait' => $group->sum('wait'),
                         'length' => $group->sum('length')
