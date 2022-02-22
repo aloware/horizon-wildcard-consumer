@@ -6,6 +6,8 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Laravel\Horizon\ProvisioningPlan as BaseProvisioningPlan;
 use Laravel\Horizon\SupervisorOptions;
+use Aloware\HorizonWildcardConsumer\Storages\Redis;
+use Aloware\HorizonWildcardConsumer\Storages\RabbitMQ;
 
 class ProvisioningPlan extends BaseProvisioningPlan
 {
@@ -16,6 +18,13 @@ class ProvisioningPlan extends BaseProvisioningPlan
      * @var array
      */
     protected $supervisors = [];
+
+    /**
+     * Current env
+     * 
+     * @var string
+     */
+    protected $env;
 
     /*
      * Last run of observer
@@ -36,7 +45,8 @@ class ProvisioningPlan extends BaseProvisioningPlan
     {
         $this->plan = $plan;
         $this->master = $master;
-        $this->updatedSupervisors(config('horizon.env') ?? config('app.env'));
+        $this->env = config('horizon.env') ?? config('app.env');
+        $this->updatedSupervisors();
     }
 
     /**
@@ -48,12 +58,12 @@ class ProvisioningPlan extends BaseProvisioningPlan
      */
     protected function convert($supervisor, $options)
     {
-        $options = collect($options)->mapWithKeys(function ($value, $key) {
+        $options = collect($options)->mapWithKeys(function ($value, $key) use ($supervisor) {
             $key = $key === 'tries' ? 'max_tries' : $key;
             $key = $key === 'processes' ? 'max_processes' : $key;
 
             if ($key === 'queue') {
-                $value = $this->getQueues($value);
+                $value = $this->getQueues($value, $supervisor);
             }
 
             return [Str::camel($key) => $value];
@@ -82,15 +92,14 @@ class ProvisioningPlan extends BaseProvisioningPlan
     /**
      * Parse new queues and return updated supervisors
      *
-     * @param  string  $env
      * @return array
      */
-    public function updatedSupervisors($env): array
+    public function updatedSupervisors(): array
     {
         $updatedSupervisors = [];
         $this->parsed = $this->toSupervisorOptions();
 
-        foreach ($this->parsed[$env] as $key => $supervisor) {
+        foreach ($this->parsed[$this->env] as $key => $supervisor) {
             if (blank($supervisor->queue)) {
                 continue;
             }
@@ -111,10 +120,10 @@ class ProvisioningPlan extends BaseProvisioningPlan
                 }
                 $parsedQueues = array_unique($parsedQueues);
                 $this->supervisors[$supervisor->name] = $parsedQueues;
-                $this->parsed[$env][$key]->queue = implode(',', $parsedQueues);
+                $this->parsed[$this->env][$key]->queue = implode(',', $parsedQueues);
                 $updatedSupervisors[] = $supervisor->name;
             } else {
-                unset($this->parsed[$env][$key]);
+                unset($this->parsed[$this->env][$key]);
             }
         }
 
@@ -130,7 +139,7 @@ class ProvisioningPlan extends BaseProvisioningPlan
      * @return string
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    protected function getQueues($queues): string
+    protected function getQueues($queues, $supervisor): string
     {
         $queues = collect(is_array($queues) ? $queues : explode(',', $queues));
 
@@ -145,7 +154,17 @@ class ProvisioningPlan extends BaseProvisioningPlan
         $matched = [];
 
         if (count($wildcards) > 0) {
-            $matched = (new WildcardMatcher($wildcards))->handle();
+            $driver = config('queue.default', 'redis');
+            $storage = null;
+            if ($driver === 'redis') {
+                $conn = config('horizon.supervisors.' . $this->env . '.' . $supervisor);
+                $storage = new Redis($conn);
+            }
+
+            if ($driver === 'rabbitmq') {
+                $storage = new RabbitMQ();
+            }
+            $matched = (new WildcardMatcher($storage))->handle($wildcards);
         }
 
         $matched = array_unique(

@@ -2,31 +2,8 @@
 
 namespace Aloware\HorizonWildcardConsumer;
 
-use Aloware\HorizonWildcardConsumer\Storages\Redis;
-use Aloware\HorizonWildcardConsumer\Storages\RabbitMQ;
-
 class WildcardMatcher
 {
-    /**
-     * Queues that matched with given pattern
-     * @var array
-     */
-    public $matched = [];
-
-    /**
-     * Wildcards that needs to be processed
-     *
-     * @var array
-     */
-    protected $wildcards = [];
-
-    /**
-     * Currently selected storage for jobs
-     *
-     * @var string
-     */
-    protected $driver;
-
     /**
      * Storage instance
      *
@@ -34,10 +11,9 @@ class WildcardMatcher
      */
     protected $storage;
 
-    public function __construct(array $wildcards = [])
+    public function __construct($storage)
     {
-        $this->wildcards = $wildcards;
-        $this->driver = config('queue.default', 'redis');
+        $this->storage = $storage;
     }
 
     /**
@@ -45,29 +21,23 @@ class WildcardMatcher
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function handle(): array
+    public function handle(array $wildcards = []): array
     {
-        if ($this->driver === 'redis') {
-            $this->storage = new Redis;
-        }
-
-        if ($this->driver === 'rabbitmq') {
-            $this->storage = new RabbitMQ;
-        }
-
         $queues = $this->storage->queues();
+
+        $matched = [];
 
         if (count($queues) > 0) {
             foreach ($queues as $queue) {
-                foreach ($this->wildcards as $wildcard) {
+                foreach ($wildcards as $wildcard) {
                     if ($this->wildcardMatches($wildcard, $queue)) {
-                        $this->matched[] = $queue;
+                        $matched[] = $queue;
                     }
                 }
             }
         }
 
-        return $this->matched;
+        return $matched;
     }
 
     /**

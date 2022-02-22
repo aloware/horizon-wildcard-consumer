@@ -25,7 +25,7 @@ class MasterSupervisor extends BaseMasterSupervisor
             sleep(1);
 
             if ($provisioning->shouldRun()) {
-                $updatedSupervisors = $provisioning->updatedSupervisors($env);
+                $updatedSupervisors = $provisioning->updatedSupervisors();
                 if (count($updatedSupervisors) > 0) {
                     $supervisors = $this
                         ->supervisors
