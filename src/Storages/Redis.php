@@ -7,6 +7,14 @@ use Illuminate\Support\Str;
 
 class Redis implements StorageContract
 {
+
+    public $conn;
+
+    public function __construct($conn)
+    {
+        $this->conn = $conn;
+    }
+
     /**
      * Gets queues from Redis
      *
@@ -20,7 +28,7 @@ class Redis implements StorageContract
             );
 
             $keys = app('redis')
-                ->connection(config('horizon.use'))
+                ->connection($this->conn)
                 ->keys('*queues:*');
 
             return collect($keys)
