@@ -170,8 +170,9 @@ class ProvisioningPlan extends BaseProvisioningPlan
         $driver = config('queue.default', 'redis');
         $storage = null;
         if ($driver === 'redis') {
-            $conn = config('horizon.supervisors.' . $this->env . '.' . $supervisor);
-            $storage = new Redis($conn);
+            $redisConn = config('horizon.environments.' . $this->env . '.' . $supervisor . '.connection');
+            $queueConn = config('queue.connections.' . $redisConn . '.connection');
+            $storage = new Redis($queueConn);
         }
 
         if ($driver === 'rabbitmq') {
