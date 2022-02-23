@@ -11,24 +11,29 @@ class WorkloadResponseMiddleware
     {
         $response = $next($request);
 
-        if ($request->path() == config('horizon.path', 'horizon') . '/api/workload') {
+        if ($request->path() == 'horizon/api/workload') {
 
             $env = config('app.env');
 
             $wildcards = collect(config('horizon.environments.' . $env))
                 ->pluck('queue')
-                ->collapse()
+                ->flatten()
                 ->filter(function ($item) {
                     return Str::contains($item, '*');
-                });
+                })
+                ->values()
+                ->all();
 
             $groups = collect($response->getOriginalContent())
                 ->map(function ($item) use ($wildcards) {
-                    $queues = explode(',', $item['name']);
+
+                    $queues = $this->normalizeQueueName($item['name']);
+
                     foreach ($wildcards as $wildcard) {
+
                         foreach ($queues as $queue) {
+
                             if ($this->wildcardMatches($wildcard, $queue)) {
-                                $item['orig_name'] = $item['name'];
                                 $item['name'] = $wildcard;
                             }
                         }
@@ -37,10 +42,8 @@ class WorkloadResponseMiddleware
                 })
                 ->groupBy('name')
                 ->map(function ($group) {
-                    $origNames = $group->pluck('orig_name')->all();
                     return [
                         'name' => data_get($group->first(), 'name'),
-                        'orig_name' => is_array($origNames) ? implode(',', $origNames) : '',
                         'processes' => data_get($group->first(), 'processes'),
                         'wait' => $group->sum('wait'),
                         'length' => $group->sum('length')
@@ -50,6 +53,7 @@ class WorkloadResponseMiddleware
             $response->setContent(
                 $groups->values()->toJson()
             );
+
         }
 
         return $response;
@@ -57,14 +61,11 @@ class WorkloadResponseMiddleware
 
     private function wildcardMatches($pattern, $haystack): bool
     {
-        $regex = str_replace(
-            ["\*"], // wildcard chars
-            ['.*', '.'],  // regexp chars
-            preg_quote($pattern)
-        );
+        return fnmatch($pattern, $haystack);
+    }
 
-        preg_match('/^' . $regex . '$/is', $haystack, $matches);
-
-        return count($matches) > 0;
+    private function normalizeQueueName($queue): array
+    {
+        return is_array($queue) ? $queue : explode(',', $queue);
     }
 }
