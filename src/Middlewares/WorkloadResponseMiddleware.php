@@ -11,7 +11,7 @@ class WorkloadResponseMiddleware
     {
         $response = $next($request);
 
-        if ($request->path() === config('horizon.path', 'horizon') . '/api/workload') {
+        if ($request->path() == config('horizon.path', 'horizon') . '/api/workload') {
 
             $env = config('app.env');
 
