@@ -13,16 +13,7 @@ class WorkloadResponseMiddleware
 
         if ($request->path() == 'horizon/api/workload') {
 
-            $env = config('app.env');
-
-            $wildcards = collect(config('horizon.environments.' . $env))
-                ->pluck('queue')
-                ->flatten()
-                ->filter(function ($item) {
-                    return Str::contains($item, '*');
-                })
-                ->values()
-                ->all();
+            $wildcards = $this->getWildcards();
 
             $groups = collect($response->getOriginalContent())
                 ->map(function ($item) use ($wildcards) {
@@ -30,14 +21,13 @@ class WorkloadResponseMiddleware
                     $queues = $this->normalizeQueueName($item['name']);
 
                     foreach ($wildcards as $wildcard) {
-
                         foreach ($queues as $queue) {
-
-                            if ($this->wildcardMatches($wildcard, $queue)) {
+                            if (fnmatch($wildcard, $queue)) {
                                 $item['name'] = $wildcard;
                             }
                         }
                     }
+
                     return $item;
                 })
                 ->groupBy('name')
@@ -59,9 +49,18 @@ class WorkloadResponseMiddleware
         return $response;
     }
 
-    private function wildcardMatches($pattern, $haystack): bool
+    private function getWildcards(): array
     {
-        return fnmatch($pattern, $haystack);
+         $env = config('app.env');
+
+         return collect(config('horizon.environments.' . $env))
+            ->pluck('queue')
+            ->flatten()
+            ->filter(function ($item) {
+                return Str::contains($item, '*');
+            })
+            ->values()
+            ->all();
     }
 
     private function normalizeQueueName($queue): array
