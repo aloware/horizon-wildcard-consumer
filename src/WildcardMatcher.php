@@ -30,7 +30,7 @@ class WildcardMatcher
         if (count($queues) > 0) {
             foreach ($queues as $queue) {
                 foreach ($wildcards as $wildcard) {
-                    if ($this->wildcardMatches($wildcard, $queue)) {
+                    if (fnmatch($wildcard, $queue)) {
                         $matched[] = $queue;
                     }
                 }
@@ -38,25 +38,5 @@ class WildcardMatcher
         }
 
         return $matched;
-    }
-
-    /**
-     * Match queues with given wildcard
-     *
-     * @param  string  $pattern
-     * @param  string  $haystack
-     * @return bool
-     */
-    protected function wildcardMatches($pattern, $haystack): bool
-    {
-        $regex = str_replace(
-            ["\*"], // wildcard chars
-            ['.*', '.'],  // regexp chars
-            preg_quote($pattern)
-        );
-
-        preg_match('/^' . $regex . '$/is', $haystack, $matches);
-
-        return count($matches) > 0;
     }
 }
