@@ -54,13 +54,15 @@ class WorkloadResponseMiddleware
          $env = config('app.env');
 
          return collect(config('horizon.environments.' . $env))
-            ->pluck('queue')
-            ->flatten()
-            ->filter(function ($item) {
-                return Str::contains($item, '*');
-            })
-            ->values()
-            ->all();
+             ->pluck('queue')
+             ->map(function ($queue) {
+                 return $this->normalizeQueueName($queue);
+             })
+             ->flatten()
+             ->filter(function ($item) {
+                 return Str::contains($item, '*');
+             })
+             ->all();
     }
 
     private function normalizeQueueName($queue): array
